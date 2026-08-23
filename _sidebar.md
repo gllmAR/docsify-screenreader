@@ -1,0 +1,6 @@
+- [Home](/)
+- Test pages
+  - [Long form](tests/long-form.md)
+  - [Structures](tests/structures.md)
+  - [Code heavy](tests/code-heavy.md)
+  - [Edge cases](tests/edge-cases.md)

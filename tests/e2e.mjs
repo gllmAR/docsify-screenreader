@@ -1,0 +1,112 @@
+import { createServer } from 'http';
+import { readFile } from 'fs/promises';
+import { extname, join, normalize } from 'path';
+import { fileURLToPath } from 'url';
+import { chromium, firefox } from 'playwright';
+
+const ENGINE = process.env.BROWSER === 'firefox' ? firefox : chromium;
+
+const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
+const PORT = 4173;
+const MIME = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+  '.md': 'text/markdown', '.json': 'application/json', '.svg': 'image/svg+xml'
+};
+
+const server = createServer(async (req, res) => {
+  try {
+    let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    if (p === '/' || p === '') p = '/index.html';
+    const fp = normalize(join(ROOT, p));
+    if (!fp.startsWith(ROOT)) { res.writeHead(403); res.end(); return; }
+    const data = await readFile(fp);
+    res.writeHead(200, { 'Content-Type': MIME[extname(fp)] || 'application/octet-stream' });
+    res.end(data);
+  } catch (e) {
+    res.writeHead(404); res.end('nf');
+  }
+});
+
+let failures = 0;
+const assert = (c, m) => { console.log((c ? '  ok - ' : '  FAIL - ') + m); if (!c) failures++; };
+
+await new Promise((r) => server.listen(PORT, r));
+
+const browser = await ENGINE.launch();
+const page = await browser.newPage();
+
+const consoleErrors = [];
+page.on('console', (msg) => { if (msg.type() === 'error' || msg.type() === 'warning') consoleErrors.push(msg.type() + ': ' + msg.text()); });
+page.on('pageerror', (err) => consoleErrors.push('pageerror: ' + err.message));
+
+await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(800);
+
+console.log('# load & render');
+assert(consoleErrors.length === 0, 'no console/page errors on load ' + JSON.stringify(consoleErrors.slice(0, 3)));
+
+const contentLen = await page.evaluate(() => (document.querySelector('.markdown-section') || { innerHTML: '' }).innerHTML.length);
+assert(contentLen > 100, 'docsify rendered markdown content (' + contentLen + ' chars)');
+
+const fab = page.locator('#dsr-host');
+assert(await fab.count() === 1, 'widget host injected');
+
+console.log('# panel interaction');
+await page.locator('#dsr-host .fab').click();
+await page.waitForTimeout(200);
+const panelOpen = await page.locator('#dsr-host .panel.open').count();
+assert(panelOpen === 1, 'panel opens on FAB tap');
+
+const progressLabel = await page.locator('#dsr-host .plabel').textContent();
+assert(/\/\s*\d+/.test(progressLabel) && !/nothing to read/.test(progressLabel), 'progress shows sentence count ("' + progressLabel.trim() + '")');
+
+const voiceOpts = await page.locator('#dsr-host .voice option').count();
+console.log('  info - voice options: ' + voiceOpts);
+
+console.log('# playback');
+await page.locator('#dsr-host .bplay').click();
+await page.waitForTimeout(1200);
+const playingClass = await page.locator('#dsr-host .fab.playing').count();
+const statusText = await page.locator('#dsr-host .status').textContent();
+assert(playingClass === 1, 'FAB enters playing state');
+assert(statusText.trim().length > 5, 'status shows current sentence ("' + statusText.trim().slice(0, 60) + '...")');
+
+await page.locator('#dsr-host .bnext').click();
+await page.waitForTimeout(400);
+const label2 = await page.locator('#dsr-host .plabel').textContent();
+assert(!/^1 \//.test(label2.trim()), 'next-sentence advances cursor ("' + label2.trim() + '")');
+
+await page.locator('#dsr-host .bstop').click();
+await page.waitForTimeout(300);
+
+console.log('# highlight');
+await page.locator('#dsr-host .bplay').click();
+await page.waitForTimeout(1000);
+const hlCount = await page.evaluate(() =>
+  window.CSS && CSS.highlights ? Array.from(CSS.highlights.keys()).length : -1
+);
+console.log('  info - CSS.highlights entries while playing: ' + hlCount);
+await page.locator('#dsr-host .bstop').click();
+
+console.log('# SPA navigation');
+await page.click('a[href="#/tests/structures"]');
+await page.waitForTimeout(900);
+const labelNav = await page.locator('#dsr-host .plabel').textContent();
+assert(!/nothing to read/.test(labelNav), 're-chunked after route change ("' + labelNav.trim() + '")');
+
+console.log('# prefs persistence');
+await page.locator('#dsr-host .s-rate').fill('1.5');
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+const rateVal = await page.locator('#dsr-host .s-rate').inputValue();
+assert(rateVal === '1.5', 'rate persisted across reload');
+
+console.log('');
+if (consoleErrors.length) {
+  console.log('captured console output:');
+  for (const c of consoleErrors.slice(0, 10)) console.log('  ' + c.slice(0, 200));
+}
+console.log(failures ? failures + ' FAILURE(S)' : 'All e2e checks passed');
+await browser.close();
+server.close();
+process.exit(failures ? 1 : 0);

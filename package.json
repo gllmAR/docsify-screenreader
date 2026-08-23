@@ -1,0 +1,20 @@
+{
+  "name": "docsify-screenreader",
+  "version": "0.1.0",
+  "description": "Docsify 5 plugin: floating screen-reader widget with live word highlighting, MediaSession lock-screen controls and background playback keep-alive.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --minify --format=iife --target=es2019 --outfile=docsify-screenreader.min.js",
+    "watch": "esbuild src/index.js --bundle --format=iife --target=es2019 --outfile=docsify-screenreader.min.js --watch",
+    "test": "node tests/smoke.test.mjs",
+    "test:e2e": "node tests/e2e.mjs",
+    "test:e2e:firefox": "BROWSER=firefox node tests/e2e.mjs",
+    "serve": "python3 -m http.server 3000"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "jsdom": "^30.0.1",
+    "playwright": "^1.62.1"
+  }
+}
