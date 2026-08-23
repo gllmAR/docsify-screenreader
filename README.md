@@ -1,5 +1,7 @@
 # docsify-screenreader
 
+[![Deploy to GitHub Pages](https://github.com/gllmAR/docsify-screenreader/actions/workflows/deploy.yml/badge.svg)](https://github.com/gllmAR/docsify-screenreader/actions/workflows/deploy.yml)
+
 A [Docsify 5](https://docsify.js.org) plugin that adds a floating text-to-speech widget to your docs. It reads your pages aloud sentence by sentence, highlights the current word, keeps playing when the phone screen turns off (Android), and puts play/pause controls on the lock screen via the Media Session API. All preferences persist in `localStorage`.
 
 **Live demo & test pages:** https://gllmar.github.io/docsify-screenreader/
