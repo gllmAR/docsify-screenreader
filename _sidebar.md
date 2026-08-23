@@ -4,3 +4,11 @@
   - [Structures](tests/structures.md)
   - [Code heavy](tests/code-heavy.md)
   - [Edge cases](tests/edge-cases.md)
+- Languages
+  - [Overview](tests/i18n.md)
+  - [Français](tests/i18n/french.md)
+  - [Italiano](tests/i18n/italian.md)
+  - [Suomi](tests/i18n/finnish.md)
+  - [Español](tests/i18n/spanish.md)
+  - [中文](tests/i18n/chinese.md)
+  - [日本語](tests/i18n/japanese.md)

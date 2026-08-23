@@ -18,15 +18,24 @@ function extractMappedText(el) {
   return { utt, pieces };
 }
 
+const CJK_TERMINATORS = '\u3002\uFF01\uFF1F\u2026';
+
+function isTerminator(c) {
+  return c === '.' || c === '!' || c === '?' || c === '\u2026' ||
+    c === '\u3002' || c === '\uFF01' || c === '\uFF1F';
+}
+
 function scanSentenceRanges(text) {
   const ranges = [];
   let start = 0;
-  const terminators = '.!?\u2026';
   for (let i = 0; i < text.length; i++) {
-    if (terminators.indexOf(text[i]) === -1) continue;
+    if (!isTerminator(text[i])) continue;
     let j = i + 1;
-    while (j < text.length && terminators.indexOf(text[j]) !== -1) j++;
-    if (j >= text.length || /\s/.test(text[j])) {
+    while (j < text.length && isTerminator(text[j])) j++;
+    const next = j < text.length ? text[j] : '';
+    const boundary = next === '' || /\s/.test(next) ||
+      (CJK_TERMINATORS.indexOf(text[j - 1]) !== -1 && !isTerminator(next));
+    if (boundary) {
       pushRange(ranges, text, start, j);
       start = j;
       i = j - 1;
@@ -65,16 +74,20 @@ function splitLong(ranges, text) {
   const out = [];
   for (const r of ranges) {
     let s = r.start;
-    while (r.end - s > MAX_SENT) {
+    const pieces = [];
+    let guard = 0;
+    while (r.end - s > MAX_SENT && guard++ < 100) {
       let cut = text.lastIndexOf(' ', s + MAX_SENT);
       if (cut <= s + 40) cut = s + MAX_SENT;
-      out.push({ start: s, end: cut });
+      pieces.push({ start: s, end: cut });
       s = cut;
       while (s < r.end && /\s/.test(text[s])) s++;
     }
-    if (r.end - s >= 2) {
-      if (out.length && s <= out[out.length - 1].end) out[out.length - 1].end = Math.max(out[out.length - 1].end, r.end);
-      else out.push({ start: s, end: r.end });
+    if (r.end - s >= 2) pieces.push({ start: s, end: r.end });
+    for (const p of pieces) {
+      const last = out[out.length - 1];
+      if (!last || p.start >= last.end) out.push(p);
+      else last.end = Math.max(last.end, p.end);
     }
   }
   return out;

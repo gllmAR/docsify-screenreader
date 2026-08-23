@@ -101,24 +101,54 @@ global.SpeechSynthesisUtterance = class {
 global.speechSynthesis = new FakeSynth();
 
 const { default: Player } = await import('../src/player.js');
-const p = new Player();
-const events = [];
-p.on('sentence', (i, it, active) => events.push(['s', i, active]));
-p.on('finish', () => events.push(['finish']));
-const small = build(
-  (() => {
-    document.body.innerHTML = '<main class="markdown-section"><p>One. Two. Three.</p></main>';
-    return document.querySelector('.markdown-section');
-  })(),
-  { readCode: false }
-);
-p.setItems(small.items, '/test');
-p.playFrom(0);
-await new Promise((r) => setTimeout(r, 30));
-assert(p.state === 'idle', 'player returns to idle after queue drains');
-const sentEvents = events.filter((e) => e[0] === 's');
-assert(sentEvents.map((e) => e[1]).join(',') === '0,1,2', 'chained all three sentences in order (got ' + JSON.stringify(sentEvents.map((e) => e[1])) + ')');
-assert(events.includes('finish') || events.some((e) => e[0] === 'finish'), 'finish event emitted');
+{
+  const p = new Player();
+  const events = [];
+  p.on('sentence', (i, it, active) => events.push(['s', i, active]));
+  p.on('finish', () => events.push(['finish']));
+  const small = build(
+    (() => {
+      document.body.innerHTML = '<main class="markdown-section"><p>One. Two. Three.</p></main>';
+      return document.querySelector('.markdown-section');
+    })(),
+    { readCode: false }
+  );
+  p.setItems(small.items, '/test');
+  p.playFrom(0);
+  await new Promise((r) => setTimeout(r, 30));
+  assert(p.state === 'idle', 'player returns to idle after queue drains');
+  const sentEvents = events.filter((e) => e[0] === 's');
+  assert(sentEvents.map((e) => e[1]).join(',') === '0,1,2', 'chained all three sentences in order (got ' + JSON.stringify(sentEvents.map((e) => e[1])) + ')');
+  assert(events.includes('finish') || events.some((e) => e[0] === 'finish'), 'finish event emitted');
+}
+
+console.log('# front matter parsing');
+const { parseFrontMatter } = await import('../src/frontmatter.js');
+const fm1 = parseFrontMatter('---\nlang: fr\ntitle: "Test Page"\n---\n\n# Body');
+assert(fm1.lang === 'fr', 'unquoted scalar parsed (lang: fr)');
+assert(fm1.title === 'Test Page', 'quoted scalar unquoted');
+const fm2 = parseFrontMatter("---\nlang: 'zh-CN'\n---\nbody");
+assert(fm2.lang === 'zh-CN', 'single-quoted scalar parsed');
+const fm3 = parseFrontMatter('# no front matter here');
+assert(Object.keys(fm3).length === 0, 'absent front matter yields empty object');
+const fm4 = parseFrontMatter('---\n# a comment\nlang: ja\ninvalid line without colon\n---\nx');
+assert(fm4.lang === 'ja' && !fm4['invalid line without colon'], 'comments and malformed lines skipped');
+
+console.log('# CJK sentence splitting');
+document.body.innerHTML =
+  '<main class="markdown-section">' +
+  '<p>\u5E8A\u524D\u660E\u6708\u5149\uFF0C\u7591\u662F\u5730\u4E0A\u971C\u3002\u4E3E\u5934\u671B\u660E\u6708\uFF0C\u4F4E\u5934\u601D\u6545\u4E61\u3002</p>' +
+  '<p>\u4ECA\u65E5\u306F\u3044\u3044\u5929\u6C17\u3067\u3059\u306D\uFF01\u516C\u5712\u306B\u884C\u304D\u307E\u305B\u3093\u304B\uFF1F\u4E00\u7DD2\u306B\u6563\u6B69\u3057\u307E\u3057\u3087\u3046\u3002</p>' +
+  '</main>';
+const cjkDoc = build(document.querySelector('.markdown-section'), { readCode: false });
+const zhItems = cjkDoc.items.filter((i) => i.text.includes('\u3002') || !i.text.includes('\uFF0C'));
+assert(zhItems.length >= 3, 'Chinese poem split at full stops (got ' + zhItems.length + ' items)');
+const zhFirst = cjkDoc.blocks[0].sentences;
+assert(zhFirst.length === 2, 'two Chinese sentences from two \u3002 terminators');
+const jaPara = cjkDoc.blocks[1];
+const jaTexts = jaPara.sentences.map((r) => jaPara.utt.slice(r.start, r.end));
+assert(jaTexts.length === 3, 'Japanese split at \uFF01 \uFF1F and \u3002 (got ' + jaTexts.length + ')');
+assert(jaTexts[0].endsWith('\uFF01'), 'first Japanese sentence ends with exclamation');
 
 console.log(failures ? ('\n' + failures + ' FAILURE(S)') : '\nAll smoke tests passed');
 process.exit(failures ? 1 : 0);

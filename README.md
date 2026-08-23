@@ -44,7 +44,8 @@ Optional configuration:
 - **Keep screen on** option — Screen Wake Lock API while reading
 - **Hide the widget** — fully hidden except a small edge tab; restore by tapping it or `Alt`+`R`
 - **Position memory** — remembers where you stopped on each route and restores the cursor on return
-- **Zero dependencies**, one file (~31 KB minified), everything scoped in a shadow root
+- **Per-page language override** — front matter `lang:` switches voices automatically; CJK-aware sentence splitting
+- **Zero dependencies**, one file (~33 KB minified), everything scoped in a shadow root
 
 ## Widget guide
 
@@ -62,6 +63,25 @@ Optional configuration:
 | Shortcut | Action |
 | -------- | ------ |
 | `Alt` + `R` | Toggle widget visibility |
+
+## Per-page language override
+
+Any page can declare its own language via YAML front matter. On navigation the reader switches to a matching voice automatically:
+
+```markdown
+---
+lang: fr
+---
+
+# Votre contenu en français
+```
+
+- Priority: front matter `lang` → `$docsify.screenreader.lang` → `<html lang>` → browser locale
+- Your manual voice pick is remembered **per language** (`voiceByLang` pref): choose an Italian voice on an Italian page and it sticks only for Italian pages
+- Sentence splitting understands CJK punctuation (`。` `！` `？`) even without spaces after them; word highlighting works there too
+- If no installed voice matches, the system default is used instead of failing
+
+Live examples: [language test pages](https://gllmar.github.io/docsify-screenreader/#/tests/i18n) (French, Italian, Finnish, Spanish, Chinese, Japanese).
 
 ## Mobile behavior (honest matrix)
 

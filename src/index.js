@@ -1,5 +1,6 @@
 import prefs from './prefs.js';
 import { build as buildDoc } from './chunker.js';
+import { parseFrontMatter } from './frontmatter.js';
 import Player from './player.js';
 import * as hl from './highlighter.js';
 import KeepAlive from './keepalive.js';
@@ -35,6 +36,8 @@ function screenreaderPlugin(hook, vm) {
   let widget = null;
   let doc = null;
   let path = '/';
+  let pageMeta = {};
+  let pageLang = '';
   let lastSave = 0;
   let inited = false;
 
@@ -49,7 +52,8 @@ function screenreaderPlugin(hook, vm) {
       keepAwake: prefs.read('keepAwake', false),
       readCode: prefs.read('readCode', !!opts.readCode),
       hidden: prefs.read('hidden', false),
-      pos: prefs.read('pos', null)
+      pos: prefs.read('pos', null),
+      voiceByLang: prefs.read('voiceByLang', {})
     };
   }
 
@@ -183,6 +187,39 @@ function screenreaderPlugin(hook, vm) {
     widget.setVoices(list, player.voiceURI);
   }
 
+  function resolveVoiceForLang(lang) {
+    const vs = speechSynthesis.getVoices();
+    if (!vs || !vs.length) {
+      refreshVoices();
+      setTimeout(() => resolveVoiceForLang(lang), 600);
+      return;
+    }
+    const norm = (lang || '').toLowerCase().replace('_', '-');
+    let pick = null;
+    const remembered = settings.voiceByLang[lang];
+    if (remembered) pick = vs.find((v) => v.voiceURI === remembered) || null;
+    if (!pick && settings.voiceURI) {
+      const saved = vs.find((v) => v.voiceURI === settings.voiceURI);
+      if (saved && (!norm || saved.lang.toLowerCase().replace('_', '-').indexOf(norm) === 0)) {
+        pick = saved;
+      }
+    }
+    if (!pick && norm) {
+      const matches = vs.filter((v) => v.lang.toLowerCase().replace('_', '-').indexOf(norm) === 0);
+      pick =
+        matches.find((v) => v.lang.toLowerCase().replace('_', '-') === norm) ||
+        matches.find((v) => v.localService) ||
+        matches[0] ||
+        null;
+    }
+    player.setVoice(pick ? pick.voiceURI : '');
+    if (pick) {
+      settings.voiceByLang[lang] = pick.voiceURI;
+      prefs.write('voiceByLang', settings.voiceByLang);
+    }
+    refreshVoices();
+  }
+
   function updateMsPosition() {
     const t = player.estimateTiming();
     keepAlive.updatePositionState(t.duration, t.position, player.state === 'playing');
@@ -220,6 +257,10 @@ function screenreaderPlugin(hook, vm) {
     switch (key) {
       case 'voiceURI':
         player.setVoice(val);
+        if (pageLang) {
+          settings.voiceByLang[pageLang] = val;
+          prefs.write('voiceByLang', settings.voiceByLang);
+        }
         break;
       case 'rate':
       case 'pitch':
@@ -269,6 +310,11 @@ function screenreaderPlugin(hook, vm) {
     }
   }
 
+  hook.beforeEach((markdown) => {
+    pageMeta = parseFrontMatter(markdown);
+    return markdown;
+  });
+
   hook.doneEach(() => {
     init();
     path = currentPath();
@@ -277,13 +323,26 @@ function screenreaderPlugin(hook, vm) {
     keepAlive.releaseWake();
     keepAlive.setPlaybackState('none');
     hl.clearWord();
+
+    const fm = Object.assign(
+      {},
+      (vm && (vm.frontmatter || vm.frontMatter)) || {},
+      pageMeta
+    );
+    pageLang = String(fm.lang || '').trim();
+    if (!pageLang) pageLang = opts.lang || '';
+    if (!pageLang) pageLang = document.documentElement.getAttribute('lang') || '';
+    if (!pageLang) pageLang = (navigator.language || 'en').slice(0, 2);
+    player.lang = pageLang;
+    resolveVoiceForLang(pageLang);
+
     doc = buildDoc(contentEl(), { readCode: settings.readCode });
     player.setItems(doc.items, path);
     hl.reset();
     widget.updatePlayState('idle');
     widget.setProgress(player.cursor, doc.items.length, false);
     widget.setStatus(doc.title, '');
-    keepAlive.updateMetadata(doc.title, '');
+    keepAlive.updateMetadata(doc.title, pageLang ? pageLang.toUpperCase() : '');
 
     const saved = prefs.read('lastPosition', null);
     if (saved && saved.path === path && saved.index > 0 && saved.index < doc.items.length) {
@@ -292,7 +351,12 @@ function screenreaderPlugin(hook, vm) {
       widget.setProgress(0, doc.items.length, false);
       widget.setStatus(doc.blocks[0].section, doc.items[0].text.slice(0, 110));
     }
-    void vm;
+
+    window.__dsr = {
+      player: player,
+      getLang: () => pageLang,
+      getDoc: () => doc
+    };
   });
 }
 

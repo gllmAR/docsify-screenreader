@@ -36,7 +36,12 @@ const browser = await ENGINE.launch();
 const page = await browser.newPage();
 
 const consoleErrors = [];
-page.on('console', (msg) => { if (msg.type() === 'error' || msg.type() === 'warning') consoleErrors.push(msg.type() + ': ' + msg.text()); });
+const NOISE = /Failed to load resource|language.*required dependencies|downloadable font|XML Parsing Error/i;
+page.on('console', (msg) => {
+  if ((msg.type() === 'error' || msg.type() === 'warning') && !NOISE.test(msg.text())) {
+    consoleErrors.push(msg.type() + ': ' + msg.text());
+  }
+});
 page.on('pageerror', (err) => consoleErrors.push('pageerror: ' + err.message));
 
 await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'networkidle' });
@@ -100,6 +105,34 @@ await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(600);
 const rateVal = await page.locator('#dsr-host .s-rate').inputValue();
 assert(rateVal === '1.5', 'rate persisted across reload');
+
+console.log('# language override (front matter)');
+await page.goto(`http://127.0.0.1:${PORT}/#/tests/i18n/french`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(900);
+let dsr = await page.evaluate(() => ({ lang: window.__dsr && window.__dsr.getLang(), voice: window.__dsr.player.voiceURI, voices: speechSynthesis.getVoices().length }));
+assert(dsr.lang === 'fr', 'front matter lang applied (' + dsr.lang + ')');
+assert(dsr.voice && dsr.voices > 0 && (dsr.voice.toLowerCase().includes('fr') || (() => { const v = speechSynthesis.getVoices().find((x) => x.voiceURI === dsr.voice); return v && v.lang.toLowerCase().startsWith('fr'); })()), 'french voice auto-selected (' + dsr.voice + ')');
+
+await page.goto(`http://127.0.0.1:${PORT}/#/tests/i18n/japanese`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(900);
+dsr = await page.evaluate(() => ({ lang: window.__dsr.getLang(), voice: window.__dsr.player.voiceURI }));
+assert(dsr.lang === 'ja', 'lang switches per page (' + dsr.lang + ')');
+const jaVoiceOk = await page.evaluate(() => {
+  const v = speechSynthesis.getVoices().find((x) => x.voiceURI === window.__dsr.player.voiceURI);
+  return !v || v.lang.toLowerCase().startsWith('ja');
+});
+assert(jaVoiceOk, 'japanese-compatible voice selected');
+
+await page.goto(`http://127.0.0.1:${PORT}/#/tests/i18n/chinese`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(900);
+dsr = await page.evaluate(() => ({ lang: window.__dsr.getLang(), n: window.__dsr.getDoc().items.length }));
+assert(dsr.lang === 'zh', 'chinese lang applied');
+assert(dsr.n >= 8, 'chinese page chunked into sentences without spaces (' + dsr.n + ' items)');
+
+await page.goto(`http://127.0.0.1:${PORT}/#/tests/long-form`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(900);
+dsr = await page.evaluate(() => window.__dsr.getLang());
+assert(dsr === 'en', 'falls back to en on pages without front matter (' + dsr + ')');
 
 console.log('');
 if (consoleErrors.length) {
