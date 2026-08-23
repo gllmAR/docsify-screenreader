@@ -38,16 +38,15 @@ jobs:
         run: |
           mkdir -p _site/tests/i18n
           touch _site/.nojekyll
-          cp index.html _sidebar.md README.md LICENSE docsify-screenreader.min.js _site/
+          cp index.html sidebar.md README.md LICENSE docsify-screenreader.min.js _site/
           cp tests/*.md _site/tests/
           cp tests/i18n/*.md _site/tests/i18n/
-          find _site -type f | sort > _site/manifest.txt
-          find _site -type f | sort
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+          include-hidden-files: true
 
   deploy:
     needs: build
