@@ -45,7 +45,8 @@ Optional configuration:
 - **Hide the widget** — fully hidden except a small edge tab; restore by tapping it or `Alt`+`R`
 - **Position memory** — remembers where you stopped on each route and restores the cursor on return
 - **Per-page language override** — front matter `lang:` switches voices automatically; CJK-aware sentence splitting
-- **Zero dependencies**, one file (~33 KB minified), everything scoped in a shadow root
+- **Theme adaptive** — mirrors Docsify 5 design tokens (light/dark) into the widget, live
+- **Zero dependencies**, one file (~37 KB minified), everything scoped in a shadow root
 
 ## Widget guide
 
@@ -102,11 +103,12 @@ The iOS limitation is a hard platform rule for all web apps; auto-resume is the 
 2. Each block records an exact map of utterance offsets back to its DOM text nodes.
 3. The player chains one `SpeechSynthesisUtterance` per sentence. `onboundary` events give the current word offset, which the highlighter maps to a DOM range (CSS Custom Highlight API, falling back to wrapping marks).
 4. A generated silent WAV loops in an `<audio>` element during playback, keeping the page's media session alive so Android continues in the background; Media Session handlers route lock-screen buttons to the player; a watchdog recovers from Chrome's speech-freeze bug; `visibilitychange` triggers resume-after-suspend.
-5. Preferences live under `localStorage` keys prefixed `docsify-screenreader:`.
+5. The widget mirrors the site's Docsify 5 design tokens into its shadow root and re-resolves them when stylesheets or `<html>` classes change, so it always matches light/dark themes.
+6. Preferences live under `localStorage` keys prefixed `docsify-screenreader:`.
 
 ## Development
 
-This repository doubles as the test site (GitHub Pages serves the repo root).
+Quick start (see **Building `docsify-screenreader.min.js`** above for full details):
 
 ```sh
 npm install
@@ -122,6 +124,68 @@ Manual device testing checklist lives on the [test pages](tests/long-form.md):
 - **Structures** — lists, tables, quotes, nested headings read exactly once each
 - **Code heavy** — code blocks skipped by default, included when toggled
 - **Edge cases** — unicode, entities, abbreviations, empty headings
+
+## Theme adaptation
+
+The widget reads Docsify 5's design tokens (`--color-bg`, `--color-text`, `--theme-color`, `--border-radius`, `--font-family`, `--color-mono-*`, `--mark-bg`) from computed styles and mirrors them into its shadow root, so it matches whatever theme stack the site uses:
+
+- **`dist/themes/core.min.css`** (light) → widget renders light with the site accent
+- **core theme + `core-dark.css` addon** or any `:root{--color-bg:…}` override → widget flips dark automatically
+- Word highlight follows the site's `--mark-bg`; accent, borders, radii and fonts all derive from site tokens
+- Legacy themes without tokens (e.g. classic `vue.css`) fall back to a sensible palette driven by `prefers-color-scheme`
+- A debounced MutationObserver on `<html>` attributes and `<head>` re-resolves live when stylesheets change — with a max-wait guard and self-mutation filtering so theme watchers can never starve each other
+
+## Building `docsify-screenreader.min.js`
+
+Prerequisites: Node.js ≥ 18 and npm. The bundle is produced by [esbuild](https://esbuild.github.io) from the ES modules in `src/` — there are no runtime dependencies.
+
+```sh
+npm install          # installs esbuild (+ jsdom/playwright for tests)
+npm run build        # src/index.js -> ./docsify-screenreader.min.js
+```
+
+What `npm run build` does under the hood:
+
+```
+esbuild src/index.js --bundle --minify --format=iife --target=es2019 \
+  --outfile=docsify-screenreader.min.js
+```
+
+| Flag | Why |
+| ---- | --- |
+| `--bundle` | Inlines `chunker/player/highlighter/keepalive/widget/prefs/frontmatter/theme` into one file |
+| `--format=iife` | Immediately-invoked function; registers itself as `window.$docsify.plugins.push(...)` on load |
+| `--minify` | Ships ~37 KB; safe for direct hot-linking |
+| `--target=es2019` | Transpiles newer syntax down to broadly-supported browsers |
+
+While developing use `npm run watch` (rebuilds on save), then serve locally:
+
+```sh
+npm run serve        # http://localhost:3000 — same layout GitHub Pages will serve
+```
+
+The built artifact is committed at the repository root, which doubles as the GitHub Pages web root — so users can hot-link `https://gllmar.github.io/docsify-screenreader/docsify-screenreader.min.js` directly from this repo.
+
+## Tests
+
+```sh
+npm test               # jsdom unit/smoke tests (chunker, player, front matter, CJK)
+npm run test:e2e       # Playwright headless Chromium against a local server
+BROWSER=firefox npm run test:e2e   # same suite in Firefox
+```
+
+The e2e suite verifies rendering, panel interaction, playback state machine, highlight registry, SPA re-chunking, prefs persistence, language switching and light/dark adaptation.
+
+## Deployment
+
+`.github/workflows/deploy.yml` deploys on every push to `main`:
+
+1. `npm ci` → `npm test` (unit gate)
+2. `npm run build`
+3. Assembles `_site/` (index.html, markdown, sidebar, fresh bundle, tests/)
+4. Uploads via `actions/upload-pages-artifact` → publishes with `actions/deploy-pages`
+
+One-time repo setting: **Settings → Pages → Source: “GitHub Actions”**.
 
 ## License
 

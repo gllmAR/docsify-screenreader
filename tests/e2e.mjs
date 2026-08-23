@@ -99,6 +99,25 @@ await page.waitForTimeout(900);
 const labelNav = await page.locator('#dsr-host .plabel').textContent();
 assert(!/nothing to read/.test(labelNav), 're-chunked after route change ("' + labelNav.trim() + '")');
 
+console.log('# theme adaptation');
+const bgVar = await page.evaluate(() => document.getElementById('dsr-host').style.getPropertyValue('--dsr-bg'));
+assert(!!bgVar && bgVar.trim().length > 0, '--dsr-bg resolved from site theme ("' + bgVar.trim() + '")');
+await page.evaluate(() => {
+  const s = document.createElement('style');
+  s.id = 'dsr-dark-test';
+  s.textContent = ':root{--color-bg:#1f2428;--color-text:#ddd;}';
+  document.head.appendChild(s);
+});
+await page.waitForTimeout(500);
+const darkState = await page.evaluate(() => ({
+  dark: document.getElementById('dsr-host').style.getPropertyValue('--dsr-dark'),
+  bg: document.getElementById('dsr-host').style.getPropertyValue('--dsr-bg')
+}));
+assert(darkState.dark === '1', 'widget flips to dark when site tokens change (' + darkState.bg.trim() + ')');
+assert(darkState.bg.toLowerCase().includes('31') || darkState.bg.toLowerCase().includes('1f2428'), 'dark background picked up');
+await page.evaluate(() => document.getElementById('dsr-dark-test').remove());
+await page.waitForTimeout(400);
+
 console.log('# prefs persistence');
 await page.locator('#dsr-host .s-rate').fill('1.5');
 await page.reload({ waitUntil: 'networkidle' });

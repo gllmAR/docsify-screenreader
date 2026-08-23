@@ -5,17 +5,23 @@ let supportsHL = false;
 let fbSpans = [];
 let curPieces = [];
 let curBlockEl = null;
+let styleEl = null;
 
 export function init() {
   supportsHL = typeof CSS !== 'undefined' && CSS.highlights && typeof window.Highlight === 'function';
-  const style = document.createElement('style');
-  style.id = 'dsr-highlight-styles';
-  style.textContent =
-    '::highlight(' + HL_WORD + '){background-color:#ffd54f;color:#10131a;}\n' +
+  styleEl = document.createElement('style');
+  styleEl.id = 'dsr-highlight-styles';
+  document.head.appendChild(styleEl);
+  setColors('#ffd54f', '#10131a');
+}
+
+export function setColors(markBg, markFg) {
+  if (!styleEl) return;
+  styleEl.textContent =
+    '::highlight(' + HL_WORD + '){background-color:' + (markBg || '#ffd54f') + ';color:' + (markFg || '#10131a') + ';}\n' +
     '::highlight(' + HL_SENT + '){background-color:rgba(122,162,255,.16);text-decoration:none;}\n' +
     '.markdown-section .dsr-fbs{background:rgba(122,162,255,.16);border-radius:3px;box-shadow:0 0 0 3px rgba(122,162,255,.16);transition:background .2s;}\n' +
-    '.dsr-fbw{background:#ffd54f;color:#10131a;border-radius:2px;}';
-  document.head.appendChild(style);
+    '.dsr-fbw{background:' + (markBg || '#ffd54f') + ';color:' + (markFg || '#10131a') + ';border-radius:2px;}';
 }
 
 export function reset() {

@@ -5,6 +5,7 @@ import Player from './player.js';
 import * as hl from './highlighter.js';
 import KeepAlive from './keepalive.js';
 import { createWidget } from './widget.js';
+import { resolveTheme, watchTheme } from './theme.js';
 
 const DEFAULT_OPTS = { position: 'bottom-right', lang: '', readCode: false };
 
@@ -62,6 +63,16 @@ function screenreaderPlugin(hook, vm) {
     inited = true;
     loadSettings();
     hl.init();
+    let lastHlSig = '';
+    const applyHlColors = () => {
+      const t = resolveTheme();
+      const sig = t.vars['--dsr-mark'] + '|' + (t.dark ? 'd' : 'l');
+      if (sig === lastHlSig) return;
+      lastHlSig = sig;
+      hl.setColors(t.vars['--dsr-mark'], t.dark ? '#0f1115' : '#10131a');
+    };
+    applyHlColors();
+    watchTheme(applyHlColors);
 
     player = new Player();
     player.lang =

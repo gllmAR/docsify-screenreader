@@ -1,4 +1,5 @@
 import { ICONS, panelHtml, escapeHtml } from './widget-template.js';
+import { applyTheme, watchTheme } from './theme.js';
 
 function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
@@ -214,6 +215,8 @@ export function createWidget(opts) {
   bindCheck($('.c-code'), 'readCode');
 
   setHidden(!!settings.hidden);
+  applyTheme(host);
+  watchTheme(() => applyTheme(host));
 
   return {
     host,
