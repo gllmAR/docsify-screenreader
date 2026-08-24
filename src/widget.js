@@ -21,6 +21,7 @@ export function createWidget(opts) {
   const fab = $('.fab');
   const tab = $('.tab');
   const panel = $('.panel');
+  const ptitle = $('.ptitle');
   const bplay = $('.bplay');
   const bstop = $('.bstop');
   const progress = $('.progress input');
@@ -33,7 +34,6 @@ export function createWidget(opts) {
   const vPitch = $('.v-pitch');
   const vVol = $('.v-vol');
   const voiceSel = $('.voice');
-  const cEnabled = $('.c-enabled');
 
   let playing = false;
   let dragging = false;
@@ -230,7 +230,6 @@ export function createWidget(opts) {
       if (handlers.onChange) handlers.onChange(key, input.checked);
     });
   }
-  bindCheck($('.c-enabled'), 'enabled');
   bindCheck($('.c-hl'), 'highlight');
   bindCheck($('.c-scroll'), 'autoScroll');
   bindCheck($('.c-wake'), 'keepAwake');
@@ -240,9 +239,16 @@ export function createWidget(opts) {
     enabled = !!on;
     settings.enabled = enabled;
     fab.classList.toggle('off', !enabled);
-    cEnabled.checked = enabled;
+    ptitle.classList.toggle('off', !enabled);
+    ptitle.setAttribute('aria-checked', enabled ? 'true' : 'false');
     refreshDisabled();
   }
+
+  ptitle.addEventListener('click', () => {
+    const next = !enabled;
+    setEnabled(next);
+    if (handlers.onChange) handlers.onChange('enabled', next);
+  });
 
   setHidden(!!settings.hidden);
   setEnabled(!!settings.enabled);

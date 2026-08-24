@@ -292,7 +292,10 @@ function screenreaderPlugin(hook, vm) {
         break;
       case 'enabled':
         widget.setEnabled(val);
-        if (!val && player.state !== 'idle') player.stop();
+        if (!val) {
+          if (player.state !== 'idle') player.stop();
+          hl.reset();
+        }
         break;
       case 'readCode':
         rebuild(0);

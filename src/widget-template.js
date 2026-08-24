@@ -25,7 +25,11 @@ export const STYLE = `
 .panel{position:fixed;width:min(92vw,332px);max-height:min(74vh,600px);overflow-y:auto;overscroll-behavior:contain;background:var(--dsr-panel,color-mix(in srgb,var(--dsr-bg,#fff),transparent 4%));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--dsr-fg,#333);border:1px solid color-mix(in srgb,var(--dsr-fg,#333),var(--dsr-bg,#fff) 90%);border-radius:max(14px,var(--dsr-radius,3px));z-index:2147483001;box-shadow:0 12px 44px var(--dsr-shadow,rgba(0,0,0,.5));padding:14px;display:none;font-size:13px;line-height:1.45}
 .panel.open{display:block}
 .phead{display:flex;align-items:center;gap:6px;margin-bottom:8px}
-.ptitle{font-weight:700;font-size:14px;flex:1;display:flex;align-items:center;gap:7px;color:var(--dsr-fg,#333)}
+.ptitle{font-weight:700;font-size:14px;flex:1;display:flex;align-items:center;gap:7px;color:var(--dsr-fg,#333);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;border:none;background:none;padding:0;text-align:left;font-family:inherit}
+.ptitle:focus-visible{outline:2px solid var(--dsr-accent,#4f6ef7);outline-offset:2px;border-radius:4px}
+.ptitle.off{color:var(--dsr-muted,#98a0b3);opacity:.6}
+.ptitle.off svg{fill:var(--dsr-muted,#98a0b3)}
+.ptitle.off span::after{content:" \\00b7 off";font-weight:500}
 .ptitle svg{width:16px;height:16px;fill:var(--dsr-accent,#4f6ef7);flex:0 0 auto}
 .hbtn{background:var(--dsr-hover,color-mix(in srgb,var(--dsr-fg,#333),transparent 92%));border:none;color:var(--dsr-fg,#333);font-size:11.5px;padding:6px 10px;border-radius:calc(var(--dsr-radius,3px) + 5px);cursor:pointer;font-family:inherit}
 .hbtn:hover{background:color-mix(in srgb,var(--dsr-accent,#4f6ef7),transparent 85%)}
@@ -53,9 +57,6 @@ select option{background:var(--dsr-bg,#fff);color:var(--dsr-fg,#333)}
 .toggles{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-top:2px}
 .tg{display:flex;align-items:center;gap:7px;color:var(--dsr-fg,#333);font-size:12px;cursor:pointer;user-select:none}
 .tg input{accent-color:var(--dsr-accent,#4f6ef7);width:15px;height:15px;cursor:pointer;flex:0 0 auto;margin:0}
-.enablerow{display:flex;align-items:center;justify-content:center;margin-bottom:8px;padding:7px 10px;background:var(--dsr-inset,color-mix(in srgb,var(--dsr-fg,#333),transparent 94%));border-radius:calc(var(--dsr-radius,3px) + 4px)}
-.enbl{display:flex;align-items:center;gap:8px;color:var(--dsr-fg,#333);font-size:12.5px;font-weight:600;cursor:pointer;user-select:none}
-.enbl input{accent-color:var(--dsr-accent,#4f6ef7);width:16px;height:16px;cursor:pointer;margin:0}
 .hint{margin-top:10px;color:var(--dsr-muted,#98a0b3);font-size:10.5px;text-align:center;line-height:1.7}
 .hint kbd{background:var(--dsr-hover,color-mix(in srgb,var(--dsr-fg,#333),transparent 90%));border-radius:4px;padding:1px 5px;font-family:inherit;font-size:10px}
 @media(max-width:480px){.panel{left:8px!important;right:8px!important;top:auto!important;bottom:64px!important;width:auto}}
@@ -68,12 +69,11 @@ export function panelHtml() {
     '<button class="tab" aria-label="Show screen reader"><span>&#127911;</span></button>' +
     '<div class="panel" role="dialog" aria-label="Screen reader controls">' +
       '<div class="phead">' +
-        '<span class="ptitle">' + ICONS.speaker + 'Screen Reader</span>' +
+        '<button class="ptitle" type="button" role="switch" aria-checked="true" title="Enable or disable the reader">' +
+          ICONS.speaker + '<span>Screen Reader</span>' +
+        '</button>' +
         '<button class="hbtn hide">Hide</button>' +
         '<button class="hbtn close" aria-label="Close panel">&#10005;</button>' +
-      '</div>' +
-      '<div class="enablerow">' +
-        '<label class="enbl"><input type="checkbox" class="c-enabled" checked><span>Reader enabled</span></label>' +
       '</div>' +
       '<div class="transport">' +
         '<button class="tbtn bprevsec" title="Previous section">&#171;</button>' +
@@ -101,7 +101,7 @@ export function panelHtml() {
         '<label class="tg"><input type="checkbox" class="c-wake"> Keep screen on</label>' +
         '<label class="tg"><input type="checkbox" class="c-code"> Read code blocks</label>' +
       '</div>' +
-      '<div class="hint"><kbd>Alt</kbd>+<kbd>R</kbd> toggle &#183; click any paragraph to read from there</div>' +
+      '<div class="hint">Tap the header to enable or disable &#183; <kbd>Alt</kbd>+<kbd>R</kbd> show or hide</div>' +
     '</div>'
   );
 }
