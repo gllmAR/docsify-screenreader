@@ -56,6 +56,10 @@ assert(contentLen > 100, 'docsify rendered markdown content (' + contentLen + ' 
 const fab = page.locator('#dsr-host');
 assert(await fab.count() === 1, 'widget host injected');
 
+console.log('# default reader state');
+assert(await page.locator('#dsr-host .fab.off').count() === 1, 'reader starts disabled by default');
+assert(!(await page.locator('#dsr-host .bplay').isDisabled()), 'play button stays available to enable the reader');
+
 console.log('# panel interaction');
 await page.locator('#dsr-host .fab').click();
 await page.waitForTimeout(200);
@@ -131,10 +135,19 @@ await page.waitForTimeout(150);
 await page.locator('#dsr-host .c-enabled').uncheck();
 await page.waitForTimeout(150);
 assert(await page.locator('#dsr-host .fab.off').count() === 1, 'FAB greys out when reader disabled');
-assert(await page.locator('#dsr-host .bplay').isDisabled(), 'transport disabled when reader off');
+assert(!(await page.locator('#dsr-host .bplay').isDisabled()), 'play button remains clickable to re-enable');
+assert(await page.locator('#dsr-host .bnext').isDisabled(), 'other transport disabled when reader off');
 await page.locator('.markdown-section p').first().click();
 await page.waitForTimeout(250);
 assert(await page.locator('#dsr-host .fab.playing').count() === 0, 'paragraph click does not start reading when disabled');
+await page.locator('#dsr-host .bplay').click();
+await page.waitForTimeout(400);
+assert(await page.locator('#dsr-host .fab.off').count() === 0, 'play click re-enables the reader');
+assert(await page.locator('#dsr-host .fab.playing').count() === 1, 'and starts playback');
+await page.locator('#dsr-host .bstop').click();
+await page.waitForTimeout(200);
+await page.locator('#dsr-host .c-enabled').uncheck();
+await page.waitForTimeout(150);
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(600);
 await page.locator('#dsr-host .fab').click();

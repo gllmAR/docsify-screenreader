@@ -52,7 +52,7 @@ function screenreaderPlugin(hook, vm) {
       autoScroll: prefs.read('autoScroll', true),
       keepAwake: prefs.read('keepAwake', false),
       readCode: prefs.read('readCode', !!opts.readCode),
-      enabled: prefs.read('enabled', true),
+      enabled: prefs.read('enabled', false),
       hidden: prefs.read('hidden', false),
       pos: prefs.read('pos', null),
       voiceByLang: prefs.read('voiceByLang', {})

@@ -53,8 +53,9 @@ select option{background:var(--dsr-bg,#fff);color:var(--dsr-fg,#333)}
 .toggles{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-top:2px}
 .tg{display:flex;align-items:center;gap:7px;color:var(--dsr-fg,#333);font-size:12px;cursor:pointer;user-select:none}
 .tg input{accent-color:var(--dsr-accent,#4f6ef7);width:15px;height:15px;cursor:pointer;flex:0 0 auto;margin:0}
-.tg-main{grid-column:1/-1;background:var(--dsr-inset,color-mix(in srgb,var(--dsr-fg,#333),transparent 94%));border-radius:calc(var(--dsr-radius,3px) + 4px);padding:8px 10px;font-weight:600}
-.tg-main input{width:17px;height:17px}
+.enablerow{display:flex;align-items:center;justify-content:center;margin-bottom:8px;padding:7px 10px;background:var(--dsr-inset,color-mix(in srgb,var(--dsr-fg,#333),transparent 94%));border-radius:calc(var(--dsr-radius,3px) + 4px)}
+.enbl{display:flex;align-items:center;gap:8px;color:var(--dsr-fg,#333);font-size:12.5px;font-weight:600;cursor:pointer;user-select:none}
+.enbl input{accent-color:var(--dsr-accent,#4f6ef7);width:16px;height:16px;cursor:pointer;margin:0}
 .hint{margin-top:10px;color:var(--dsr-muted,#98a0b3);font-size:10.5px;text-align:center;line-height:1.7}
 .hint kbd{background:var(--dsr-hover,color-mix(in srgb,var(--dsr-fg,#333),transparent 90%));border-radius:4px;padding:1px 5px;font-family:inherit;font-size:10px}
 @media(max-width:480px){.panel{left:8px!important;right:8px!important;top:auto!important;bottom:64px!important;width:auto}}
@@ -70,6 +71,9 @@ export function panelHtml() {
         '<span class="ptitle">' + ICONS.speaker + 'Screen Reader</span>' +
         '<button class="hbtn hide">Hide</button>' +
         '<button class="hbtn close" aria-label="Close panel">&#10005;</button>' +
+      '</div>' +
+      '<div class="enablerow">' +
+        '<label class="enbl"><input type="checkbox" class="c-enabled" checked><span>Reader enabled</span></label>' +
       '</div>' +
       '<div class="transport">' +
         '<button class="tbtn bprevsec" title="Previous section">&#171;</button>' +
@@ -92,7 +96,6 @@ export function panelHtml() {
       '<select class="voice"></select>' +
       '<div class="divider"></div>' +
       '<div class="toggles">' +
-        '<label class="tg tg-main"><input type="checkbox" class="c-enabled" checked> Reader enabled</label>' +
         '<label class="tg"><input type="checkbox" class="c-hl"> Word highlight</label>' +
         '<label class="tg"><input type="checkbox" class="c-scroll"> Auto-scroll</label>' +
         '<label class="tg"><input type="checkbox" class="c-wake"> Keep screen on</label>' +

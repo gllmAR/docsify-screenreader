@@ -44,7 +44,7 @@ export function createWidget(opts) {
 
   function refreshDisabled() {
     const off = !enabled;
-    bplay.disabled = off || count === 0;
+    bplay.disabled = count === 0;
     bstop.disabled = off || (!playing && curState !== 'paused');
     $('.bnext').disabled = off;
     $('.bprev').disabled = off;
@@ -183,7 +183,13 @@ export function createWidget(opts) {
   }
   renderPlayIcon();
 
-  bplay.addEventListener('click', () => handlers.onTogglePlay && handlers.onTogglePlay());
+  bplay.addEventListener('click', () => {
+    if (!enabled) {
+      setEnabled(true);
+      if (handlers.onChange) handlers.onChange('enabled', true);
+    }
+    handlers.onTogglePlay && handlers.onTogglePlay();
+  });
   bstop.addEventListener('click', () => handlers.onStop && handlers.onStop());
   $('.bnext').addEventListener('click', () => handlers.onNextSentence && handlers.onNextSentence());
   $('.bprev').addEventListener('click', () => handlers.onPrevSentence && handlers.onPrevSentence());
