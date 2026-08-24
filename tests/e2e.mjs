@@ -125,6 +125,25 @@ await page.waitForTimeout(600);
 const rateVal = await page.locator('#dsr-host .s-rate').inputValue();
 assert(rateVal === '1.5', 'rate persisted across reload');
 
+console.log('# reader enable toggle');
+await page.locator('#dsr-host .fab').click();
+await page.waitForTimeout(150);
+await page.locator('#dsr-host .c-enabled').uncheck();
+await page.waitForTimeout(150);
+assert(await page.locator('#dsr-host .fab.off').count() === 1, 'FAB greys out when reader disabled');
+assert(await page.locator('#dsr-host .bplay').isDisabled(), 'transport disabled when reader off');
+await page.locator('.markdown-section p').first().click();
+await page.waitForTimeout(250);
+assert(await page.locator('#dsr-host .fab.playing').count() === 0, 'paragraph click does not start reading when disabled');
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+await page.locator('#dsr-host .fab').click();
+await page.waitForTimeout(150);
+assert((await page.locator('#dsr-host .c-enabled').isChecked()) === false, 'disabled state persists across reload');
+await page.locator('#dsr-host .c-enabled').check();
+await page.waitForTimeout(150);
+assert(await page.locator('#dsr-host .fab.off').count() === 0, 'reader re-enabled from panel');
+
 console.log('# language override (front matter)');
 await page.goto(`http://127.0.0.1:${PORT}/#/tests/i18n/french`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(900);

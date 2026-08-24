@@ -17,6 +17,7 @@ export const STYLE = `
 .fab:active{transform:scale(.96)}
 .fab svg{width:22px;height:22px;fill:currentColor;pointer-events:none}
 .fab.playing{animation:dsr-pulse 1.6s ease-out infinite}
+.fab.off{opacity:.42;filter:grayscale(1);box-shadow:0 4px 14px var(--dsr-shadow,rgba(0,0,0,.22))}
 @keyframes dsr-pulse{0%{box-shadow:0 4px 14px var(--dsr-shadow,rgba(0,0,0,.35)),0 0 0 0 color-mix(in srgb,var(--dsr-accent,#4f6ef7),transparent 45%)}70%{box-shadow:0 4px 14px var(--dsr-shadow,rgba(0,0,0,.35)),0 0 0 14px color-mix(in srgb,var(--dsr-accent,#4f6ef7),transparent 100%)}100%{box-shadow:0 4px 14px var(--dsr-shadow,rgba(0,0,0,.35)),0 0 0 0 color-mix(in srgb,var(--dsr-accent,#4f6ef7),transparent 100%)}}
 .tab{position:fixed;right:0;top:58%;width:16px;height:68px;background:color-mix(in srgb,var(--dsr-fg,#333),transparent 62%);border-radius:10px 0 0 10px;border:none;cursor:pointer;z-index:2147483000;display:none;align-items:center;justify-content:center;opacity:.5;transition:opacity .2s,width .15s;padding:0}
 .tab:hover,.tab:focus-visible{opacity:1;width:20px}
@@ -52,6 +53,8 @@ select option{background:var(--dsr-bg,#fff);color:var(--dsr-fg,#333)}
 .toggles{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-top:2px}
 .tg{display:flex;align-items:center;gap:7px;color:var(--dsr-fg,#333);font-size:12px;cursor:pointer;user-select:none}
 .tg input{accent-color:var(--dsr-accent,#4f6ef7);width:15px;height:15px;cursor:pointer;flex:0 0 auto;margin:0}
+.tg-main{grid-column:1/-1;background:var(--dsr-inset,color-mix(in srgb,var(--dsr-fg,#333),transparent 94%));border-radius:calc(var(--dsr-radius,3px) + 4px);padding:8px 10px;font-weight:600}
+.tg-main input{width:17px;height:17px}
 .hint{margin-top:10px;color:var(--dsr-muted,#98a0b3);font-size:10.5px;text-align:center;line-height:1.7}
 .hint kbd{background:var(--dsr-hover,color-mix(in srgb,var(--dsr-fg,#333),transparent 90%));border-radius:4px;padding:1px 5px;font-family:inherit;font-size:10px}
 @media(max-width:480px){.panel{left:8px!important;right:8px!important;top:auto!important;bottom:64px!important;width:auto}}
@@ -89,6 +92,7 @@ export function panelHtml() {
       '<select class="voice"></select>' +
       '<div class="divider"></div>' +
       '<div class="toggles">' +
+        '<label class="tg tg-main"><input type="checkbox" class="c-enabled" checked> Reader enabled</label>' +
         '<label class="tg"><input type="checkbox" class="c-hl"> Word highlight</label>' +
         '<label class="tg"><input type="checkbox" class="c-scroll"> Auto-scroll</label>' +
         '<label class="tg"><input type="checkbox" class="c-wake"> Keep screen on</label>' +

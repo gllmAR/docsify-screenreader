@@ -52,6 +52,7 @@ function screenreaderPlugin(hook, vm) {
       autoScroll: prefs.read('autoScroll', true),
       keepAwake: prefs.read('keepAwake', false),
       readCode: prefs.read('readCode', !!opts.readCode),
+      enabled: prefs.read('enabled', true),
       hidden: prefs.read('hidden', false),
       pos: prefs.read('pos', null),
       voiceByLang: prefs.read('voiceByLang', {})
@@ -289,6 +290,10 @@ function screenreaderPlugin(hook, vm) {
         if (val && player.state !== 'idle') keepAlive.acquireWake();
         else keepAlive.releaseWake();
         break;
+      case 'enabled':
+        widget.setEnabled(val);
+        if (!val && player.state !== 'idle') player.stop();
+        break;
       case 'readCode':
         rebuild(0);
         break;
@@ -298,7 +303,7 @@ function screenreaderPlugin(hook, vm) {
   }
 
   function onContentClick(e) {
-    if (!inited || !doc || !doc.items.length) return;
+    if (!inited || !settings.enabled || !doc || !doc.items.length) return;
     if (widget.host.contains(e.target)) return;
     const t = e.target;
     if (t.closest && t.closest('a,button,input,select,textarea,label,summary,details,video,audio,form,.badge,.dsr-ignore')) return;

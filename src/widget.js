@@ -33,10 +33,25 @@ export function createWidget(opts) {
   const vPitch = $('.v-pitch');
   const vVol = $('.v-vol');
   const voiceSel = $('.voice');
+  const cEnabled = $('.c-enabled');
 
   let playing = false;
   let dragging = false;
   let suppressClick = false;
+  let enabled = true;
+  let curState = 'idle';
+  let count = 0;
+
+  function refreshDisabled() {
+    const off = !enabled;
+    bplay.disabled = off || count === 0;
+    bstop.disabled = off || (!playing && curState !== 'paused');
+    $('.bnext').disabled = off;
+    $('.bprev').disabled = off;
+    $('.bnextsec').disabled = off;
+    $('.bprevsec').disabled = off;
+    progress.disabled = off || count === 0;
+  }
 
   function applyFabPos() {
     let p = settings.pos;
@@ -209,12 +224,22 @@ export function createWidget(opts) {
       if (handlers.onChange) handlers.onChange(key, input.checked);
     });
   }
+  bindCheck($('.c-enabled'), 'enabled');
   bindCheck($('.c-hl'), 'highlight');
   bindCheck($('.c-scroll'), 'autoScroll');
   bindCheck($('.c-wake'), 'keepAwake');
   bindCheck($('.c-code'), 'readCode');
 
+  function setEnabled(on) {
+    enabled = !!on;
+    settings.enabled = enabled;
+    fab.classList.toggle('off', !enabled);
+    cEnabled.checked = enabled;
+    refreshDisabled();
+  }
+
   setHidden(!!settings.hidden);
+  setEnabled(!!settings.enabled);
   applyTheme(host);
   watchTheme(() => applyTheme(host));
 
@@ -222,19 +247,20 @@ export function createWidget(opts) {
     host,
     updatePlayState(state) {
       playing = state === 'playing';
+      curState = state;
       renderPlayIcon();
       fab.classList.toggle('playing', playing);
-      bstop.disabled = !playing && state !== 'paused';
+      refreshDisabled();
     },
     setProgress(cursor, total, active) {
       const n = Math.max(total, 0);
+      count = n;
       progress.max = String(Math.max(n - 1, 0));
-      progress.disabled = n === 0;
       progress.value = String(clamp(cursor, 0, Math.max(n - 1, 0)));
       plabel.textContent = n ? (cursor + 1) + ' / ' + n : 'nothing to read on this page';
-      bplay.disabled = n === 0;
-      bstop.disabled = !active && !playing;
+      refreshDisabled();
     },
+    setEnabled,
     setStatus(section, snippet) {
       statusEl.innerHTML =
         '<b>' + escapeHtml(section || '\u00a0') + '</b>' + escapeHtml(snippet || '');

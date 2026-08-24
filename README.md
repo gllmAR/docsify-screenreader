@@ -34,6 +34,7 @@ Optional configuration:
 ## Features
 
 - **Simple collapsible widget** — a draggable floating button expands into a full control panel
+- **Reader enable switch** — a prominent "Reader enabled" toggle at the top of the panel; switch the screen reader fully off (no paragraph-click reading, no playback) and back on. The floating button turns grey while the reader is off
 - **Sentence-by-sentence reading** with natural chaining across the whole page
 - **Current word highlight** — CSS Custom Highlight API where available, mark fallback elsewhere
 - **Auto-scroll** to the section being read
@@ -54,7 +55,8 @@ Optional configuration:
 
 | Element | Action |
 | ------- | ------ |
-| Floating button | Tap to expand/collapse the panel; drag to move (position is remembered) |
+| Floating button | Tap to expand/collapse the panel; drag to move (position is remembered); turns grey while the reader is disabled |
+| Reader enabled | Master switch at the top of the panel — uncheck to stop playback and disable paragraph-click reading |
 | « / » | Jump to previous / next heading section |
 | ◀ / ▶ | Previous / next sentence |
 | Progress bar | Click or drag to seek |
