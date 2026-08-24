@@ -18,6 +18,10 @@ function extractMappedText(el) {
   return { utt, pieces };
 }
 
+export function piecesOf(el) {
+  return extractMappedText(el).pieces;
+}
+
 const CJK_TERMINATORS = '\u3002\uFF01\uFF1F\u2026';
 
 function isTerminator(c) {

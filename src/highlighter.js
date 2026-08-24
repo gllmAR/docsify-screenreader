@@ -1,14 +1,17 @@
+import { piecesOf } from './chunker.js';
+
 const HL_WORD = 'dsr-word';
 const HL_SENT = 'dsr-sentence';
 
 let supportsHL = false;
 let fbSpans = [];
+let lastFbWord = null;
 let curPieces = [];
 let curBlockEl = null;
 let styleEl = null;
 
 export function init() {
-  supportsHL = typeof CSS !== 'undefined' && CSS.highlights && typeof window.Highlight === 'function';
+  supportsHL = !!(window.CSS && window.CSS.highlights && typeof window.Highlight === 'function');
   styleEl = document.createElement('style');
   styleEl.id = 'dsr-highlight-styles';
   document.head.appendChild(styleEl);
@@ -31,11 +34,10 @@ export function reset() {
     curBlockEl = null;
   }
   if (supportsHL) {
-    CSS.highlights.delete(HL_WORD);
-    CSS.highlights.delete(HL_SENT);
+    window.CSS.highlights.delete(HL_WORD);
+    window.CSS.highlights.delete(HL_SENT);
   }
   curPieces = [];
-  lastBlockKey = -1;
 }
 
 export function show(block, item, autoScroll) {
@@ -50,11 +52,11 @@ export function show(block, item, autoScroll) {
   if (supportsHL) {
     const sentRange = makeRange(curPieces, item.start, item.end);
     if (sentRange) {
-      CSS.highlights.set(HL_SENT, new window.Highlight(sentRange));
+      window.CSS.highlights.set(HL_SENT, new window.Highlight(sentRange));
     } else {
-      CSS.highlights.delete(HL_SENT);
+      window.CSS.highlights.delete(HL_SENT);
     }
-    CSS.highlights.delete(HL_WORD);
+    window.CSS.highlights.delete(HL_WORD);
   } else if (curBlockEl) {
     curBlockEl.classList.add('dsr-fbs');
   }
@@ -75,44 +77,48 @@ export function word(absStart, length, sentEnd) {
   if (typeof sentEnd === 'number') e = Math.min(e, sentEnd);
   if (supportsHL) {
     const r = makeRange(curPieces, s, e);
-    if (r) CSS.highlights.set(HL_WORD, new window.Highlight(r));
+    if (r) window.CSS.highlights.set(HL_WORD, new window.Highlight(r));
   } else if (curBlockEl && document.contains(curBlockEl)) {
-    const r = makeRange(curPieces, s, e);
+    if (lastFbWord) {
+      unwrapSpan(lastFbWord);
+      lastFbWord = null;
+    }
+    const r = makeRange(piecesOf(curBlockEl), s, e);
     if (r && r.startContainer === r.endContainer && r.startContainer.nodeType === 3) {
       try {
         const span = document.createElement('span');
         span.className = 'dsr-fbw';
         r.surroundContents(span);
         fbSpans.push(span);
+        lastFbWord = span;
       } catch (err) {}
     }
   }
 }
 
+function unwrapSpan(span) {
+  if (!span || !span.parentNode) return;
+  while (span.firstChild) span.parentNode.insertBefore(span.firstChild, span);
+  span.parentNode.removeChild(span);
+}
+
 function clearFallback() {
-  for (const s of fbSpans) {
-    if (s.parentNode) {
-      while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s);
-      s.parentNode.removeChild(s);
-    }
-  }
+  for (const s of fbSpans) unwrapSpan(s);
   fbSpans = [];
+  lastFbWord = null;
 }
 
 export function clearWord() {
-  if (supportsHL) CSS.highlights.delete(HL_WORD);
-  for (const s of fbSpans) {
-    if (s.parentNode) {
-      while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s);
-      s.parentNode.removeChild(s);
-    }
-  }
+  if (supportsHL) window.CSS.highlights.delete(HL_WORD);
+  for (const s of fbSpans) unwrapSpan(s);
   fbSpans = [];
+  lastFbWord = null;
 }
 
 function makeRange(pieces, start, end) {
-  const a = locate(pieces, start);
-  const b = locate(pieces, end - 1 >= start ? end : start + 1);
+  const hasLen = end - 1 >= start;
+  const a = locate(pieces, start, false);
+  const b = locate(pieces, hasLen ? end : start + 1, hasLen);
   if (!a || !b) return null;
   if (!a.node.isConnected || !b.node.isConnected) return null;
   try {
@@ -125,10 +131,13 @@ function makeRange(pieces, start, end) {
   }
 }
 
-function locate(pieces, abs) {
+function locate(pieces, abs, atEnd) {
   for (const p of pieces) {
     if (abs >= p.uStart && abs < p.uEnd) {
       return { node: p.node, offset: abs - p.uStart };
+    }
+    if (atEnd && abs === p.uEnd && p.node.nodeValue != null) {
+      return { node: p.node, offset: p.node.nodeValue.length };
     }
   }
   if (pieces.length) {

@@ -150,5 +150,63 @@ const jaTexts = jaPara.sentences.map((r) => jaPara.utt.slice(r.start, r.end));
 assert(jaTexts.length === 3, 'Japanese split at \uFF01 \uFF1F and \u3002 (got ' + jaTexts.length + ')');
 assert(jaTexts[0].endsWith('\uFF01'), 'first Japanese sentence ends with exclamation');
 
+console.log('# highlight support detection with shadowed global CSS');
+const hl = await import('../src/highlighter.js');
+const cssCalls = [];
+global.CSS = '.sidebar-nav li > ul { display: none; }';
+window.CSS = { highlights: { set: (k) => cssCalls.push(['set', k]), delete: (k) => cssCalls.push(['del', k]) } };
+window.Highlight = class {};
+hl.init();
+document.body.innerHTML = '<main class="markdown-section"><p>Shadow detection sentence.</p></main>';
+{
+  const doc = build(document.querySelector('.markdown-section'), { readCode: false });
+  hl.show(doc.blocks[0], doc.items[0], false);
+  hl.word(doc.items[0].start + 0, 7, doc.items[0].end);
+  assert(cssCalls.some((c) => c[0] === 'set' && c[1] === 'dsr-sentence'), 'sentence highlight uses window.CSS.highlights despite shadowed global CSS');
+  assert(cssCalls.some((c) => c[0] === 'set' && c[1] === 'dsr-word'), 'word highlight uses window.CSS.highlights despite shadowed global CSS');
+  hl.reset();
+}
+
+console.log('# fallback word tracking (no Highlight API)');
+delete window.CSS;
+delete window.Highlight;
+hl.init();
+document.body.innerHTML = '<main class="markdown-section"><p id="fb">Hello world this is a test sentence.</p></main>';
+{
+  const doc = build(document.querySelector('.markdown-section'), { readCode: false });
+  const blk = doc.blocks[0];
+  const item = doc.items[0];
+  hl.show(blk, item, false);
+  const words = [[0, 5], [6, 5], [12, 4], [17, 2], [20, 1], [22, 4], [27, 9]];
+  let allOk = true;
+  for (const [idx, len] of words) {
+    hl.word(item.start + idx, len, item.end);
+    const spans = blk.el.querySelectorAll('.dsr-fbw');
+    const expect = item.text.slice(idx, idx + len);
+    if (spans.length !== 1 || (spans[0].textContent || '') !== expect) {
+      allOk = false;
+      console.error('  FAIL - fallback word [' + expect + '] -> ' + spans.length + ' span(s): ' + (spans[0] && spans[0].textContent));
+    }
+  }
+  assert(allOk, 'fallback tracks every word, one span at a time');
+  hl.clearWord();
+  assert(blk.el.querySelectorAll('.dsr-fbw').length === 0, 'fallback highlight clears on stop');
+  hl.reset();
+}
+
+console.log('# fallback word ending at a text-node boundary');
+{
+  document.body.innerHTML = '<main class="markdown-section"><p id="fb2">Mixed <strong>bold</strong> words</p></main>';
+  const doc = build(document.querySelector('.markdown-section'), { readCode: false });
+  const blk = doc.blocks[0];
+  const item = doc.items[0];
+  hl.show(blk, item, false);
+  const idx = item.text.indexOf('bold');
+  hl.word(item.start + idx, 4, item.end);
+  const spans = blk.el.querySelectorAll('.dsr-fbw');
+  assert(spans.length === 1 && spans[0].textContent === 'bold', 'word ending at a piece boundary still wraps (got ' + (spans[0] && spans[0].textContent) + ')');
+  hl.reset();
+}
+
 console.log(failures ? ('\n' + failures + ' FAILURE(S)') : '\nAll smoke tests passed');
 process.exit(failures ? 1 : 0);
